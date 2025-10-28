@@ -1,0 +1,7 @@
+app:
+  name: AI Wellness Coach
+  version: 2.0
+  description: With pinecone Personalized wellness chat using RAG and OpenAI embeddings
+openai:
+  model: gpt-4o-mini
+  embedding_model: text-embedding-3-small
