@@ -9,8 +9,10 @@ python-dotenv
 # OpenAI SDK (latest official)
 openai>=1.42.0
 
-# Vector Database (Pinecone)
-pinecone-client>=4.1.0
+# Vector Database (Pinecone)6+
+
+# pinecone-client>=4.1.0
+pinecone
 
 # Optional - if you use pandas/numpy for data handling
 numpy

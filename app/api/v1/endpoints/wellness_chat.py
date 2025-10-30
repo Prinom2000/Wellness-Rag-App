@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Query, Depends
-from app.services.openai_service import chat_with_memory
+from fastapi import APIRouter, Query, Depends, HTTPException
+from app.services.openai_service import chat_with_memory, summarize_chat_history, analyze_health_data
 from app.schemas.user_data import get_user
-from app.utils.shared_state import all_info
+from app.utils.shared_state import all_info, chat_history
 import requests
 import os
 
@@ -78,11 +78,88 @@ async def get_info(access_token: str = Query(..., description="User access token
 
 
 @router.post("/chat")
-async def wellness_chat(query: str = Query(..., description="User question or message")):
+async def wellness_chat(
+    query: str = Query(..., description="User question or message"),
+    user_id: str = Query(..., description="User ID")
+):
     """
     Chat endpoint for user wellness questions.
     """
-    response = chat_with_memory(query)
+    global chat_history
+    
+    # Initialize chat history for user if it doesn't exist
+    if user_id not in chat_history:
+        chat_history[user_id] = []
+    
+    # Get AI response
+    response = chat_with_memory(query, user_id)
+    
+    # Store the exchange in chat history
+    chat_history[user_id].append({
+        "query": query,
+        "response": response
+    })
+    
     return {"query": query, "response": response}
+
+@router.get("/chat-history")
+async def get_chat_history(user_id: str = Query(..., description="User ID")):
+    """
+    Get chat history for a specific user
+    """
+    user_history = chat_history.get(user_id, [])
+    return {
+        "user_id": user_id,
+        "history": user_history
+    }
+
+@router.get("/chat-summary")
+async def get_chat_summary(
+    user_id: str = Query(..., description="User ID"),
+    limit: int = Query(5, description="Number of recent messages to summarize")
+):
+    """
+    Get a summary of recent chat history for a specific user
+    """
+    user_history = chat_history.get(user_id, [])
+    
+    # Get the most recent conversations based on limit
+    recent_history = user_history[-limit:] if user_history else []
+    
+    # Generate summary and title
+    summary_data = summarize_chat_history(recent_history)
+    
+    return {
+        "user_id": user_id,
+        "conversation_count": len(recent_history),
+        "title": summary_data["title"],
+        "summary": summary_data["summary"],
+        "recent_messages": recent_history
+    }
+
+@router.get("/health-score")
+async def get_health_score(user_id: str = Query(..., description="User ID")):
+    """
+    Calculate and return a health score based on user's data
+    """
+    # Get user data from all_info
+    user_data = all_info.get(user_id)
+    
+    if not user_data:
+        raise HTTPException(
+            status_code=404,
+            detail="No health data found for this user. Please fetch user data first using /get_info endpoint."
+        )
+
+    # Analyze the health data
+    analysis_result = analyze_health_data(user_data)
+    
+    return {
+        "user_id": user_id,
+        "health_score": analysis_result["score"],
+        "analysis": analysis_result["analysis"],
+        "last_updated": user_data.get("timestamp", "Unknown"),
+        "data_sources": analysis_result["available_sources"]  # Only show actually available sources
+    }
 
 
