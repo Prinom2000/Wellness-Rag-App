@@ -47,27 +47,6 @@ Just visit the `/docs` route after running the server.
 
 ---
 
-## 📁 Project Structure
-app/
-├── main.py                     # FastAPI entry point
-│
-├── routes/
-│   └── api_routes.py           # Defines all API endpoints (chat, health, info)
-│
-├── services/
-│   └── openai_service.py       # Handles GPT logic, summarization, and health analysis
-│
-├── utils/
-│   ├── shared_state.py         # Global in-memory store for all_info & chat_history
-│   └── pinecone_utils.py       # Pinecone setup, embeddings, and similarity queries
-│
-├── schemas/
-│   └── user_data.py            # User schema definitions and helper functions
-│
-└── __init__.py                 # Marks directory as a Python package
-
-
-
 ---
 
 ## ⚙️ Environment Variables (.env)
@@ -85,6 +64,7 @@ OPENAI_API_KEY=your_openai_api_key
 PINECONE_API_KEY=your_pinecone_api_key
 PINECONE_INDEX_NAME=wellness-index
 PINECONE_ENVIRONMENT=us-east-1
+
 
 
 
