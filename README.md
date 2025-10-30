@@ -18,12 +18,20 @@ It provides intelligent health insights, personalized chat interactions, and con
 👉 **[View on Render (Swagger UI)](https://wellness-rag-ai-app.onrender.com/docs)**  
 <img width="1458" height="854" alt="image" src="https://github.com/user-attachments/assets/13d7d452-5eb0-468c-831d-12cc0c0efc32" />
 ---
-Access all endpoints and test requests directly in the browser.
-1️⃣ /get_info: Fetches and stores user emotions, watch data, and medical reports.
-2️⃣ /chat: Rag Chatbot service, handles user wellness chat, and saves conversation history.
-3️⃣ /chat-history: Returns full recent chat history for a user.
-4️⃣ /chat-summary: Summarizes recent chat interactions & generates a title.
-5️⃣ /health-score: Calculates a user’s health score from fetched data, then returns the score & analysis
+
+| # | Endpoint | Method | Description |
+|---|-----------|--------|-------------|
+| 1️⃣ | `/get_info` | **GET** | Fetches and stores user **emotions**, **wearable health data**, and **medical reports** from external APIs. |
+| 2️⃣ | `/chat` | **POST** | Handles **RAG-based AI chat** with memory — provides personalized wellness advice and stores conversation history. |
+| 3️⃣ | `/chat-history` | **GET** | Retrieves the **full chat history** for a given user. |
+| 4️⃣ | `/chat-summary` | **GET** | Summarizes recent chat interactions and generates a **concise title** capturing the main theme. |
+| 5️⃣ | `/health-score` | **GET** | Analyzes fetched data and returns a **personalized health score (0–100)** along with improvement suggestions. |
+
+---
+
+✅ Each endpoint is fully documented in the FastAPI Swagger UI.  
+You can test them live without any external tools like Postman.  
+Just visit the `/docs` route after running the server.
 ---
 
 ## 🛠️ Tech Stack
@@ -41,16 +49,23 @@ Access all endpoints and test requests directly in the browser.
 
 ## 📁 Project Structure
 app/
-├── main.py # FastAPI entry point
+├── main.py                     # FastAPI entry point
+│
 ├── routes/
-│ └── api_routes.py # All API endpoints
+│   └── api_routes.py           # Defines all API endpoints (chat, health, info)
+│
 ├── services/
-│ └── openai_service.py # Handles GPT logic, health analysis, summarization
+│   └── openai_service.py       # Handles GPT logic, summarization, and health analysis
+│
 ├── utils/
-│ ├── shared_state.py # In-memory store for all_info & chat_history
-│ └── pinecone_utils.py # Pinecone setup and embedding utilities
+│   ├── shared_state.py         # Global in-memory store for all_info & chat_history
+│   └── pinecone_utils.py       # Pinecone setup, embeddings, and similarity queries
+│
 ├── schemas/
-│ └── user_data.py # User data model and helper methods
+│   └── user_data.py            # User schema definitions and helper functions
+│
+└── __init__.py                 # Marks directory as a Python package
+
 
 
 ---
@@ -70,6 +85,7 @@ OPENAI_API_KEY=your_openai_api_key
 PINECONE_API_KEY=your_pinecone_api_key
 PINECONE_INDEX_NAME=wellness-index
 PINECONE_ENVIRONMENT=us-east-1
+
 
 
 
