@@ -17,6 +17,7 @@ It provides intelligent health insights, personalized chat interactions, and con
 
 👉 **[View on Render (Swagger UI)](https://wellness-rag-ai-app.onrender.com/docs)**  
 <img width="1458" height="854" alt="image" src="https://github.com/user-attachments/assets/13d7d452-5eb0-468c-831d-12cc0c0efc32" />
+---
 Access all endpoints and test requests directly in the browser.
 1️⃣ /get_info: Fetches and stores user emotions, watch data, and medical reports.
 2️⃣ /chat: Rag Chatbot service, handles user wellness chat, and saves conversation history.
@@ -69,6 +70,7 @@ OPENAI_API_KEY=your_openai_api_key
 PINECONE_API_KEY=your_pinecone_api_key
 PINECONE_INDEX_NAME=wellness-index
 PINECONE_ENVIRONMENT=us-east-1
+
 
 
 
