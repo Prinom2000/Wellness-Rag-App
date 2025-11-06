@@ -8,12 +8,11 @@ import datetime
 
 router = APIRouter()
 
-@router.get("/get_info")
-async def get_info(access_token: str = Query(..., description="User access token"),
-                  user_id: str = Query(..., description="User ID"),
-                  room_id: str = Query(..., description="Room ID")):
+@router.get("/health-score")
+async def get_health_score(user_id: str = Query(..., description="User ID"), 
+                         access_token: str = Query(..., description="User access token")):
     """
-    Get comprehensive user information including emotions, watch data, and medical reports
+    Calculate and return a health score based on user's data
     """
     global all_info
     # Construct the URLs for all endpoints
@@ -21,6 +20,7 @@ async def get_info(access_token: str = Query(..., description="User access token
     emotion_url = f"{base_url}/api/v1/emotions/user/{user_id}"
     watch_url = f"{base_url}/api/v1/health-data/user/{user_id}/debug"
     medical_url = f"{base_url}/api/v1/medical-reports"
+    meal_url = f"{base_url}/api/v1/meals"
     
     # Set up headers with the access token
     headers = {
@@ -56,7 +56,6 @@ async def get_info(access_token: str = Query(..., description="User access token
 
         # Get medical reports
         medical_response = requests.get(medical_url, headers=headers)
-
         if medical_response.status_code == 200:
             result["data"]["medical_reports"] = medical_response.json()
         else:
@@ -64,14 +63,23 @@ async def get_info(access_token: str = Query(..., description="User access token
                 "error": f"Failed with status {medical_response.status_code}",
                 "details": medical_response.text
             }
-        
-        # Store the result and room_id in all_info
-        all_info[user_id] = {
-            "data": result,
-            "room_id": room_id
-        }
-        return result
 
+        # Get meal data
+        meal_response = requests.get(meal_url, headers=headers)
+        if meal_response.status_code == 200:
+            result["data"]["meals"] = meal_response.json()
+        else:
+            result["data"]["meals"] = {
+                "error": f"Failed with status {meal_response.status_code}",
+                "details": meal_response.text
+            }
+        
+        # Store the result in all_info
+        all_info[user_id] = {
+            "data": result
+        }
+        
+        user_data = result
     except Exception as e:
         error_response = {
             "status": "error",
@@ -79,10 +87,107 @@ async def get_info(access_token: str = Query(..., description="User access token
             "details": str(e)
         }
         all_info[user_id] = {
-            "data": error_response,
-            "room_id": room_id
+            "data": error_response
         }
-        return error_response
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch health data: {str(e)}"
+        )
+
+    # Analyze the health data
+    analysis_result = analyze_health_data(user_data)
+
+    # Post health score and analysis to DB
+    db_url = f"https://wellness-backend-2-2dry.onrender.com/api/v1/chat/health-score/{user_id}"
+    db_headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    db_payload = {
+        "health_score": analysis_result["score"],
+        "analysis": analysis_result["analysis"],
+        "date": datetime.datetime.now().isoformat()
+    }
+    try:
+        requests.post(db_url, headers=db_headers, json=db_payload)
+    except Exception as e:
+        print(f"Failed to post health score to DB: {str(e)}")
+
+    return {
+        "user_id": user_id,
+        "health_score": analysis_result["score"],
+        "analysis": analysis_result["analysis"],
+    }
+
+
+
+############################################################################################
+
+@router.post("/get_info")
+async def start_new_chat(user_id: str = Query(..., description="User ID"),
+                         access_token: str = Query(..., description="User access token"),
+                        room_id: str = Query(..., description="Room ID")):
+    """
+    Initialize a new chat session with stored user data
+    """
+    if user_id not in all_info:
+        raise HTTPException(
+            status_code=404,
+            detail="No data found for this user. Please call health-score endpoint first to fetch data."
+        )
+    
+    base_url = os.getenv("BASE_URL")
+    wellness_score_url = f"{base_url}/api/v1/chat/health-score/{user_id}"
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    
+    # Initialize response dictionary
+    score_result = {
+        "status": "success",
+        "data": {}
+    }
+
+    try:
+        wellness_score_response = requests.get(wellness_score_url, headers=headers)
+        if wellness_score_response.status_code == 200:
+            score_result["data"]["wellness_score"] = wellness_score_response.json()
+        else:
+            score_result["data"]["wellness_score"] = {
+                "error": f"Failed with status {wellness_score_response.status_code}",
+                "details": wellness_score_response.text
+            }
+        
+        
+    except Exception as e:
+        score_result["data"]["wellness_score"] = {
+            "error": "Exception occurred while fetching wellness score",
+            "details": str(e)
+        }
+
+    # Update all_info with the new room_id
+    user_info = all_info[user_id]
+    user_info["room_id"] = room_id
+
+    # Merge the fetched wellness_score into stored data so it is returned
+    user_info.setdefault("data", {})
+    if "wellness_score" in score_result.get("data", {}):
+        user_info["data"]["wellness_score"] = score_result["data"]["wellness_score"]
+
+    all_info[user_id] = user_info
+    
+    
+
+
+    
+    return {
+        "status": "success",
+        "message": "Chat session initialized",
+        "user_id": user_id,
+        "room_id": room_id,
+        "data": user_info["data"]
+    }
 
 
 
@@ -100,7 +205,7 @@ async def wellness_chat(
     if user_id not in all_info:
         raise HTTPException(
             status_code=400,
-            detail="Please call get_info endpoint first to initialize the session"
+            detail="Please call start_new_chat endpoint first to initialize the session"
         )
     
     room_id = all_info[user_id]["room_id"]
@@ -145,65 +250,51 @@ async def wellness_chat(
     }
 
 @router.get("/chat-history")
-async def get_chat_history(user_id: str = Query(..., description="User ID")):
-    """
-    Get chat history for a specific user
-    """
-    user_history = chat_history.get(user_id, [])
-    return {
-        "user_id": user_id,
-        "history": user_history
-    }
-
-@router.get("/chat-summary")
-async def get_chat_summary(
+async def get_chat_history(
     user_id: str = Query(..., description="User ID"),
-    limit: int = Query(5, description="Number of recent messages to summarize")
+    room_id: str = Query(..., description="Room ID")
 ):
     """
-    Get a summary of recent chat history for a specific user
+    Get chat history for a specific user in a specific room
     """
     user_history = chat_history.get(user_id, [])
-    
-    # Get the most recent conversations based on limit
-    recent_history = user_history[-limit:] if user_history else []
-    
-    # Generate summary and title
-    summary_data = summarize_chat_history(recent_history)
+    # Filter history by room_id
+    room_history = [chat for chat in user_history if chat.get("room_id") == room_id]
     
     return {
         "user_id": user_id,
-        "conversation_count": len(recent_history),
-        "title": summary_data["title"],
-        "summary": summary_data["summary"],
-        "recent_messages": recent_history
+        "room_id": room_id,
+        "history": room_history
     }
 
-@router.get("/health-score")
-async def get_health_score(user_id: str = Query(..., description="User ID")):
-    """
-    Calculate and return a health score based on user's data
-    """
-    # Get user data from all_info
-    user_info = all_info.get(user_id)
+# @router.get("/chat-summary")
+# async def get_chat_summary(
+#     user_id: str = Query(..., description="User ID"),
+#     room_id: str = Query(..., description="Room ID"),
+#     limit: int = Query(5, description="Number of recent messages to summarize")
+# ):
+#     """
+#     Get a summary of recent chat history for a specific user in a specific room
+#     """
+#     user_history = chat_history.get(user_id, [])
     
-    if not user_info:
-        raise HTTPException(
-            status_code=404,
-            detail="No health data found for this user. Please fetch user data first using /get_info endpoint."
-        )
+#     # Filter history by room_id first
+#     room_history = [chat for chat in user_history if chat.get("room_id") == room_id]
     
-    user_data = user_info["data"]
+#     # Get the most recent conversations based on limit
+#     recent_history = room_history[-limit:] if room_history else []
+    
+#     # Generate summary and title
+#     summary_data = summarize_chat_history(recent_history)
+    
+#     return {
+#         "user_id": user_id,
+#         "room_id": room_id,
+#         "conversation_count": len(recent_history),
+#         "title": summary_data["title"],
+#         "summary": summary_data["summary"],
+#         "recent_messages": recent_history
+#     }
 
-    # Analyze the health data
-    analysis_result = analyze_health_data(user_data)
-    
-    return {
-        "user_id": user_id,
-        "health_score": analysis_result["score"],
-        "analysis": analysis_result["analysis"],
-        "last_updated": user_data.get("timestamp", "Unknown"),
-        "data_sources": analysis_result["available_sources"]  # Only show actually available sources
-    }
 
 
