@@ -194,7 +194,9 @@ async def start_new_chat(user_id: str = Query(..., description="User ID"),
 @router.post("/chat")
 async def wellness_chat(
     query: str = Query(..., description="User question or message"),
-    user_id: str = Query(..., description="User ID")
+    user_id: str = Query(..., description="User ID"),
+    access_token: str = Query(..., description="User access token"),
+    max_prompt: int = Query(10, description="Maximum number of prompts allowed")
 ):
     """
     Chat endpoint for user wellness questions.
@@ -235,13 +237,37 @@ async def wellness_chat(
     # Store the exchange in chat history
     chat_history[user_id].append(chat_data)
     
-    # Save to database
+    # # Save to database
+    # try:
+    #     # Make POST request to DB service
+    #     db_url = f"{os.getenv('DB_SERVICE_URL')}/api/v1/chats"
+    #     requests.post(db_url, json=chat_data)
+    # except Exception as e:
+    #     print(f"Failed to save chat to database: {str(e)}")
+    
+    # Also push the latest exchange to wellness backend ai-response endpoint
     try:
-        # Make POST request to DB service
-        db_url = f"{os.getenv('DB_SERVICE_URL')}/api/v1/chats"
-        requests.post(db_url, json=chat_data)
+        db_url = f"{os.getenv('BASE_URL')}"
+
+        ai_response_url = f"{db_url}/api/v1/chat/ai-response/{room_id}"
+        # max_prompt = int(os.getenv("MAX_PROMPT", "10"))
+        ai_payload = {
+            "maxPrompt": max_prompt,
+            "promptUsed": prompt_counters.get(room_id, 0),
+            "chat": [
+                {
+                    "content": query,
+                    "responseData": response
+                }
+            ]
+        }
+        ai_headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {access_token}"
+        }
+        requests.post(ai_response_url, json=ai_payload, headers=ai_headers)
     except Exception as e:
-        print(f"Failed to save chat to database: {str(e)}")
+        print(f"Failed to post ai-response to wellness backend: {e}")
     
     return {
         "query": query,
