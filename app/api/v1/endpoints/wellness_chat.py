@@ -205,7 +205,7 @@ async def wellness_chat(
     
     # Get room_id from all_info
     if user_id not in all_info:
-        raise HTTPException(maxPrompt,
+        raise HTTPException(max_prompt,
             status_code=400,
             detail="Please call start_new_chat endpoint first to initialize the session"
         )
