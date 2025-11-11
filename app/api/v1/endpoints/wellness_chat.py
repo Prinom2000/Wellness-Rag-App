@@ -98,7 +98,7 @@ async def get_health_score(user_id: str = Query(..., description="User ID"),
     analysis_result = analyze_health_data(user_data)
 
     # Post health score and analysis to DB
-    db_url = f"https://wellness-backend-2-2dry.onrender.com/api/v1/chat/health-score/{user_id}"
+    db_url = f"{base_url}/api/v1/chat/health-score/{user_id}"
     db_headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
@@ -205,7 +205,7 @@ async def wellness_chat(
     
     # Get room_id from all_info
     if user_id not in all_info:
-        raise HTTPException(
+        raise HTTPException(maxPrompt,
             status_code=400,
             detail="Please call start_new_chat endpoint first to initialize the session"
         )
@@ -236,6 +236,19 @@ async def wellness_chat(
     
     # Store the exchange in chat history
     chat_history[user_id].append(chat_data)
+
+    # Determine and persist the room's aiTitle (first message) if not already set
+    try:
+        user_info = all_info.get(user_id, {})
+        room_titles = user_info.get("room_titles", {})
+        # If no title for this room, the first message becomes the aiTitle
+        if room_id not in room_titles:
+            room_titles[room_id] = query
+            user_info["room_titles"] = room_titles
+            all_info[user_id] = user_info
+        ai_title = room_titles.get(room_id, "")
+    except Exception:
+        ai_title = ""
     
     # # Save to database
     # try:
@@ -254,6 +267,7 @@ async def wellness_chat(
         ai_payload = {
             "maxPrompt": max_prompt,
             "promptUsed": prompt_counters.get(room_id, 0),
+            "aiTitle": ai_title,
             "chat": [
                 {
                     "content": query,
@@ -272,7 +286,8 @@ async def wellness_chat(
     return {
         "query": query,
         "response": response,
-        "promptUsed": str(prompt_counters[room_id])
+        "promptUsed": str(prompt_counters[room_id]),
+        "aiTitle": ai_title
     }
 
 @router.get("/chat-history")
