@@ -1,5 +1,4 @@
 # 🧠 Wellness-RAG-AI-App
-# LIVE👉 http://72.61.158.79:8000/docs
 An **AI-powered Wellness Assistant** built using **FastAPI**, **OpenAI GPT**, and **Pinecone Vector Database**.  
 It provides intelligent health insights, personalized chat interactions, and contextual recommendations based on user data — including emotions, wearable (watch) data, and medical reports.
 ---
@@ -15,7 +14,7 @@ It provides intelligent health insights, personalized chat interactions, and con
 
 ## 🚀 Live API Documentation
 
-👉 **[View on Render (Swagger UI)](https://wellness-rag-ai-app.onrender.com/docs)**  
+👉 **View Swagger UI👉 http://72.61.158.79:8000/docs**  
 <img width="1458" height="854" alt="image" src="https://github.com/user-attachments/assets/13d7d452-5eb0-468c-831d-12cc0c0efc32" />
 ---
 
