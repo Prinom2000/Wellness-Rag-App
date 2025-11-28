@@ -1,5 +1,5 @@
 # 🧠 Wellness-RAG-AI-App
-
+#LIVE👉 http://72.61.158.79:8000/docs
 An **AI-powered Wellness Assistant** built using **FastAPI**, **OpenAI GPT**, and **Pinecone Vector Database**.  
 It provides intelligent health insights, personalized chat interactions, and contextual recommendations based on user data — including emotions, wearable (watch) data, and medical reports.
 ---
