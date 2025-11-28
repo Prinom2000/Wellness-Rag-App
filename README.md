@@ -48,14 +48,15 @@ Just visit the `/docs` route after running the server.
 ---
 
 ---
-
+## Deploy:
+**Hostinger**
 ## ⚙️ Environment Variables (.env)
 
 Create a `.env` file in the project root directory and add:
 
 ```env
 # Base Backend URL
-BASE_URL=http://wellness-backend-2-2dry.onrender.com
+BASE_URL= http://72.61.158.79
 
 # OpenAI
 OPENAI_API_KEY=your_openai_api_key
